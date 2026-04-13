@@ -1,197 +1,276 @@
-# Autómatas Celulares 1D + Algoritmos Genéticos
+# Autómatas Celulares 1D + Algoritmo Genético (POO)
 
-Optimización de reglas de autómatas celulares unidimensionales mediante algoritmos genéticos.
+Versión consolidada con **2 archivos únicamente** (sin dependencias innecesarias):
 
-## Descripción
+- **`models.py`** - Clases `CellularAutomaton` y `GeneticAlgorithm` (~500 líneas)
+- **`utils.py`** - Funciones auxiliares (~150 líneas)
 
-Este proyecto implementa un sistema completo para:
-- **Simular autómatas celulares 1D** con reglas binarias
-- **Evolucionar reglas** mediante algoritmos genéticos
-- **Evaluar convergencia** de poblaciones
-- **Analizar entropía** de patrones emergentes
+## 🚀 Uso Rápido
 
-## Estructura del Proyecto
-
-```
-├── ac.py                      # Simulador de autómata celular (vectorizado)
-├── genetic_algorithm.py       # Algoritmo genético completo (1000 generaciones)
-├── utils.py                   # Funciones consolidadas (callR, randvec01, etc)
-├── plot_automaton.py          # Visualización de patrones
-├── evaluate_automaton.py      # Evaluación con 10,000 casos
-├── evaluate_rule.py           # Validación de regla específica
-├── program_rules.py           # Interfaz interactiva para reglas
-├── Entropy/shannon_entropy.py # Cálculo de entropía
-├── Proyecto.ipynb             # Notebook principal con ejemplos
-├── requirements.txt           # Dependencias
-└── README.md                  # Este archivo
-```
-
-## Instalación
-
+### Opción 1: Ejecutar AG Directamente
 ```bash
-pip install -r requirements.txt
+python models.py
 ```
+✅ Ejecuta 50 generaciones automáticamente  
+✅ Muestra evolución en terminal  
+✅ Genera 4 gráficos automáticos  
+✅ Imprime análisis del mejor CA  
 
-**Dependencias:**
-- `numpy>=1.21.0` - Operaciones numéricas vectorizadas
-- `matplotlib>=3.5.0` - Visualización de patrones
-
-## Uso Rápido
-
-### 1. Ejecutar Algoritmo Genético Completo
-```bash
-python genetic_algorithm.py
-```
-Genera 1000 generaciones de evolución y muestra el mejor individuo encontrado.
-
-### 2. Usar en un Script Python
+### Opción 2: Usar en tu Python
 ```python
-from ac import ac
-from utils import callR, randvec01
+from models import GeneticAlgorithm
+
+ag = GeneticAlgorithm(poblacion=50, gen_max=50)
+ag.evolucionar()
+ag.visualizar_resultados()
+ag.analizar_mejor_individuo()
+```
+
+### Opción 3: Personalizar Parámetros
+Edita el bloque `if __name__ == "__main__":` en `models.py`:
+```python
+ag = GeneticAlgorithm(
+    poblacion=100,          # Individuos por generación
+    num_parents=10,         # Élite
+    gen_max=100,            # Generaciones totales
+    num_CI=50,              # Condiciones iniciales
+    ancho=101,              # Ancho del autómata
+    r=3,                    # Radio (3 = 128 bits)
+    p_mutacion=0.05         # Tasa de mutación
+)
+```
+
+## 📁 Estructura Consolidada
+
+```
+Proyecto POO (Mínimo)
+├── models.py            ⭐⭐⭐ PRINCIPAL
+│   ├── Clase CellularAutomaton
+│   │   ├── _run()           ← Simulación AC
+│   │   ├── _mutate()        ← Mutación genética
+│   │   ├── evaluate()       ← Calcular fitness
+│   │   ├── crossover()      ← Cruzamiento
+│   │   └── copy()           ← Copiar CA
+│   │
+│   ├── Clase GeneticAlgorithm
+│   │   ├── evolucionar()              ← Ejecutar AG
+│   │   ├── visualizar_resultados()    ← 4 gráficos
+│   │   └── analizar_mejor_individuo() ← Análisis
+│   │
+│   └── if __name__ == "__main__":   ← Punto de entrada
+│
+└── utils.py             ⭐ AUXILIARES
+    ├── randvec01()              ← Matriz binaria aleatoria
+    ├── CondicionesFinales()     ← Generar objetivo
+    ├── callR()                  ← Decimal → binario
+    ├── calpercent()             ← Densidad por fila
+    ├── numcoinc()               ← Coincidencias
+    ├── matcolon()               ← Generador rangos
+    └── shannon_entropy()        ← Entropía de Shannon
+```
+
+## 🎯 Clases Principales
+
+### CellularAutomaton
+Simula autómatas celulares 1D con reglas binarias.
+
+```python
+from models import CellularAutomaton
 import numpy as np
 
-# Crear una regla (Regla 30)
-regla = callR(30, r=1)
+# Crear CA con regla aleatoria
+ca = CellularAutomaton(
+    rule=np.random.randint(0, 2, 128),
+    r=3,
+    width=101,
+    timesteps=202
+)
 
-# Condición inicial
-I1 = np.zeros(101)
-I1[50] = 1
+# Ejecutar simulación
+ic = np.random.randint(0, 2, 101)
+evolucion = ca._run(ic)  # Shape: (202, 101)
 
-# Simular 100 pasos
-N = ac(regla, r=1, I1=I1, t=100)
+# Operadores genéticos
+regla_mutada = ca._mutate(0.05)
+ca2 = CellularAutomaton(np.random.randint(0, 2, 128), r=3, width=101)
+ca_hijo = ca.crossover(ca2)
+
+# Evaluar fitness
+A = np.random.randint(0, 2, (5, 101))
+Cf = np.random.randint(0, 2, (5, 101))
+fitness = ca.evaluate(A, Cf)
 ```
 
-### 3. Usar en Jupyter Notebook
+### GeneticAlgorithm
+Evoluciona poblaciones de autómatas.
+
+```python
+from models import GeneticAlgorithm
+
+# Crear AG
+ag = GeneticAlgorithm(
+    poblacion=50,
+    num_parents=5,
+    gen_max=50,
+    num_CI=20
+)
+
+# Ejecutar
+tiempo = ag.evolucionar(verbose=True)
+
+# Visualizar
+ag.visualizar_resultados()
+
+# Analizar
+ag.analizar_mejor_individuo()
+
+# Acceder estadísticas
+print(f"Mejor: {max(ag.estadisticas['mejor']):.4f}")
+print(f"Diversidad final: {ag.estadisticas['diversidad'][-1]:.4f}")
+```
+
+## 📦 Instalación
+
 ```bash
-jupyter notebook Proyecto.ipynb
+# Crear entorno virtual
+python -m venv venv
+venv\Scripts\activate
+
+# Instalar dependencias
+pip install numpy matplotlib
 ```
-Abre ejemplos ejecutables con explicaciones de código interno.
 
-## Parámetros de Configuración
+## 📊 Salida Esperada
 
-### Búsqueda Rápida (test)
+```
+╔════════════════════════════════════════════════════════════╗
+║          ALGORITMO GENÉTICO - AUTÓMATAS CELULARES         ║
+╚════════════════════════════════════════════════════════════╝
+
+Parámetros:
+  Población: 50 | Parents: 5 | Generaciones: 50
+  Condiciones iniciales: 20 | Ancho: 101 | Radio: 3
+
+Evolucionando...
+Gen   1/50 | Mejor: 0.5200 | Prom: 0.3456 | Div: 0.412
+Gen  10/50 | Mejor: 0.7450 | Prom: 0.6234 | Div: 0.295
+Gen  20/50 | Mejor: 0.8650 | Prom: 0.7456 | Div: 0.182
+Gen  30/50 | Mejor: 0.9100 | Prom: 0.8234 | Div: 0.095
+Gen  50/50 | Mejor: 0.9500 | Prom: 0.8789 | Div: 0.064
+
+✓ EVOLUCIÓN COMPLETADA
+Tiempo: 32.45 segundos
+
+MEJOR AUTÓMATA
+Regla: 110100011010000111...
+Convergencia: 95% ✓
+
+[4 gráficos generados automáticamente]
+```
+
+## 🔧 Parámetros
+
+| Parámetro | Default | Efecto |
+|-----------|---------|--------|
+| `poblacion` | 50 | ↑ Mejor calidad, ↑ tiempo |
+| `num_parents` | 5 | Células que persisten (élite) |
+| `gen_max` | 50 | ↑ Mayor convergencia |
+| `num_CI` | 20 | Condiciones iniciales para evaluar |
+| `p_mutacion` | 0.05 | ↑ Mayor exploración |
+
+## ⚡ Rendimiento
+
+| Config | Población | Generaciones | Tiempo |
+|--------|-----------|-------------|--------|
+| Rápida | 30 | 20 | ~5 seg |
+| Normal | 50 | 50 | ~30 seg |
+| Completa | 100 | 100 | ~5 min |
+
+## 💻 Requisitos
+
+- Python 3.9+
+- NumPy 1.24+
+- Matplotlib 3.7+
+
+## 🎯 Ejemplos
+
+### 1. Búsqueda Rápida
+```bash
+python models.py
+```
+
+### 2. Análisis Personalizado
 ```python
-poblacion = 50
-gen_max = 100
-num_CI = 20
-```
-Tiempo: ~1 minuto
+from models import GeneticAlgorithm
+import numpy as np
 
-### Búsqueda Balanceada
+np.random.seed(42)
+ag = GeneticAlgorithm(poblacion=100, gen_max=100)
+ag.evolucionar(verbose=True)
+ag.visualizar_resultados()
+```
+
+### 3. Múltiples Ejecuciones
 ```python
-poblacion = 100
-gen_max = 500
-num_CI = 100
-```
-Tiempo: ~30 minutos
+from models import GeneticAlgorithm
+import numpy as np
 
-### Búsqueda Exhaustiva
+resultados = []
+for seed in range(10):
+    np.random.seed(seed)
+    ag = GeneticAlgorithm()
+    ag.evolucionar()
+    resultados.append(max(ag.estadisticas['mejor']))
+
+print(f"Promedio: {np.mean(resultados):.4f}")
+print(f"Mejor: {np.max(resultados):.4f}")
+```
+
+## 🔍 API Rápida
+
+### CellularAutomaton
 ```python
-poblacion = 200
-gen_max = 1000
-num_CI = 200
+ca._run(initial_state)              # → evolucion (matriz)
+ca._mutate(0.05)                    # → regla_mutada
+ca.evaluate(A, Cf)                  # → fitness (0-1)
+ca.crossover(other)                 # → hijo (CA)
+ca.copy()                            # → copia profunda
 ```
-Tiempo: ~2 horas
 
-## Autómata Celular
-
-**Función:** `ac(R, r, I1, t)`
-
-- `R`: Regla (array binario de tamaño 2^(2r+1))
-- `r`: Radio de vecindad (generalmente 1 o 3)
-- `I1`: Condición inicial (array binario)
-- `t`: Pasos de tiempo a simular
-
-**Características:**
-- Implementación vectorizada con NumPy
-- Condiciones de frontera periódicas
-- Precálculo de exponentes para eficiencia
-
-## Algoritmo Genético
-
-**Ciclo Generacional:**
-
-1. **Evaluación** - Calcula nota de cada regla
-2. **Selección** - Mantiene los 10 mejores (elitismo)
-3. **Cruzamiento** - Combina genes de padres
-4. **Mutación** - Invierte bits aleatoriamente (5%)
-5. **Nueva generación** - Repite loop
-
-**Objetivo:** Encontrar reglas que hagan convergir el autómata a estados específicos según la densidad inicial.
-
-## Funciones Principales
-
-### utils.py
-
-| Función | Descripción |
-|---------|-------------|
-| `callR(nom, r)` | Convierte número decimal a representación binaria de regla |
-| `randvec01(filas, columnas, P0)` | Genera matriz aleatoria binaria |
-| `calpercent(A)` | Calcula porcentaje de 1s en cada fila |
-| `numcoinc(A, B)` | Cuenta coincidencias entre dos arrays |
-| `matcolon(A, B)` | Crea rangos para indexación |
-
-### Entropy
-
-| Función | Descripción |
-|---------|-------------|
-| `shannon_entropy(mat, d)` | Calcula entropía de Shannon en ventanas d×d |
-
-## Resultados Esperados
-
-- **Mejor nota**: 0.80-0.95 (80-95% de convergencia)
-- **Generación de convergencia**: 200-500
-- **Reglas encontradas**: Generalmente clasificadores simples o patrones emergentes
-
-## Scripts Adicionales
-
-| Script | Propósito |
-|--------|-----------|
-| `plot_automaton.py` | Visualiza 40 autómatas con diferentes reglas |
-| `evaluate_automaton.py` | Evalúa regla con 10,000 condiciones iniciales (width=301) |
-| `evaluate_rule.py` | Calcula nota de una regla específica |
-| `program_rules.py` | Interfaz interactiva para programar reglas manualmente |
-
-## Importabilidad
-
-Todos los scripts tienen `if __name__ == "__main__":` para permitir importación sin ejecutar código:
-
+### GeneticAlgorithm
 ```python
-# Seguro para importar - no ejecuta lógica principal
-from genetic_algorithm import CondicionesFinales
-from ac import ac
-from utils import *
+ag.evolucionar(verbose=True)        # → tiempo_total
+ag.visualizar_resultados()          # → muestra 4 gráficos
+ag.analizar_mejor_individuo()       # → imprime análisis
+ag.estadisticas['mejor']            # → array de mejores
+ag.mejores_individuos[-1]           # → mejor CA final
 ```
 
-## Notebook Jupyter
+### Utils
+```python
+randvec01(filas, cols, P0)          # → matriz binaria
+CondicionesFinales(num_CI, ancho)   # → (A, Cf) tupla
+callR(decimal, r)                   # → regla binaria
+calpercent(A)                        # → densidades
+shannon_entropy(mat, d)              # → H (bits)
+```
 
-`Proyecto.ipynb` incluye:
-- ✓ Ejemplos de todas las funciones
-- ✓ Código interno de funciones principales
-- ✓ Gráficos de convergencia
-- ✓ Análisis de efectos de parámetros
-- ✓ Comparativos de regulación entrópica
-- ✓ Recomendaciones de configuración
+## 🐛 Troubleshooting
 
-## Requisitos
+| Problema | Solución |
+|----------|----------|
+| Bajo fitness | ↑ `poblacion`, ↑ `gen_max` |
+| Convergencia lenta | ↑ `p_mutacion` |
+| Lentitud extrema | ↓ `num_CI` |
+| Resultados inconsistentes | Usar `np.random.seed()` |
 
-- Python 3.7+
-- NumPy 1.21+
-- Matplotlib 3.5+
+## 📄 Licencia
 
-## Mejoras Futuras
+Código educativo para investigación en Autómatas Celulares.
 
-- [ ] Paralelización con multiprocessing
-- [ ] Hill-climbing local adicional
-- [ ] Validación cruzada de reglas encontradas
-- [ ] Análisis de complejidad de patrones
-- [ ] Visualización en tiempo real
-- [ ] Exportar reglas encontradas
+---
 
-## Autor
-
-Proyecto universitario - Estudio de autómatas celulares y evolución computacional
-
-## Licencia
-
-Uso académico permitido
+**Versión:** 3.0 (Consolidada)  
+**Estado:** ✅ Completo  
+**Archivos:** 2 (models.py, utils.py)  
+**Total:** ~650 líneas
