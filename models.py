@@ -29,7 +29,7 @@ def _run_ca(rule, r, timesteps, initial_state):
     shifts = np.arange(-r, r + 1)
     exp = 2 ** np.arange(2 * r, -1, -1)
 
-    for _ in range(timesteps):
+    for _ in range(1, timesteps):
         state = _update(state, rule, r, lR, shifts, exp)
 
     return state
@@ -37,7 +37,7 @@ def _run_ca(rule, r, timesteps, initial_state):
 
 class CellularAutomaton:
     def __init__(self, rule, r=3, width=101, timesteps=None):
-        
+
         if isinstance(rule, int):
             self.rule = int_to_binary_rule(rule, r)
         else:
@@ -52,17 +52,18 @@ class CellularAutomaton:
         return _run_ca(self.rule, self.r, self.timesteps, initial_state.astype(np.float64))
 
     def run(self, initial_state):
-        self.trajectory = None
-        state = initial_state
-        self._save_trajectory(state)
+        state = initial_state.copy()
+        trajectory = np.zeros((self.timesteps, self.width), dtype=int)
+        trajectory[0, :] = state
 
         lR = len(self.rule)
         shifts = np.arange(-self.r, self.r + 1)
         exp = 2 ** np.arange(2 * self.r, -1, -1)
 
-        for _ in range(1, self.timesteps):
+        for t in range(1, self.timesteps):
             state = _update(state, self.rule, self.r, lR, shifts, exp)
-            self._save_trajectory(state)
+            trajectory[t, :] = state
+        self.trajectory = trajectory
 
     def copy(self):
         return CellularAutomaton(self.rule.copy(), self.r, self.width, self.timesteps)
@@ -73,7 +74,7 @@ class CellularAutomaton:
 
     def _save_trajectory(self, actual_state):
         if self.trajectory is None:
-            self.trajectory = []
+            self.trajectory = np.array()
         self.trajectory.append(actual_state)
 
     def visualize(self):

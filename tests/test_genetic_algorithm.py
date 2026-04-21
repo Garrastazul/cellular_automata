@@ -1,99 +1,121 @@
-import pytest
 import numpy as np
-from models import CellularAutomaton, binary_to_int, int_to_binary_rule
+import pytest
+from models import GeneticAlgorithm, CellularAutomaton
 
 
-# =========================
-# 🔁 CONVERSIÓN DE REGLAS
-# =========================
 
-def test_rule_roundtrip_deterministic():
-    for r in range(1, 4):
-        for rule_num in [0, 1, 2, 10, 50, 127, 255]:
-            rule = int_to_binary_rule(rule_num, r)
-            assert binary_to_int(rule) == rule_num
+def test_ga_initial_population_size():
+    ga = GeneticAlgorithm(poblacion=20, gen_max=1)
+    assert len(ga.poblacion_ca) == 20
 
 
-def test_rule_length():
-    for r in range(1, 5):
-        rule = int_to_binary_rule(10, r)
-        assert len(rule) == 2 ** (2 * r + 1)
+def test_ga_rule_length_consistency():
+    ga = GeneticAlgorithm(r=2, poblacion=10)
+    expected = 2 ** (2 * ga.r + 1)
+
+    for ca in ga.poblacion_ca:
+        assert len(ca.rule) == expected
 
 
-def test_binary_inversion_consistency():
-    for r in range(1, 4):
-        rule_num = np.random.randint(2 ** (2 * r + 1))
-        rule = int_to_binary_rule(rule_num, r)
-        assert np.array_equal(rule, int_to_binary_rule(binary_to_int(rule), r))
+
+def test_ga_evaluation_shape():
+    ga = GeneticAlgorithm(poblacion=5, gen_max=1)
+
+    A = np.random.randint(0, 2, (ga.num_CI, ga.ancho))
+    Cf = np.random.randint(0, 2, (ga.num_CI, ga.ancho))
+
+    fitness = ga._evaluar_poblacion(A, Cf)
+
+    assert fitness.shape[0] == ga.poblacion
+    assert np.all((fitness >= 0) & (fitness <= 1))
 
 
-# =========================
-# 🧠 AUTÓMATA CELULAR
-# =========================
+def test_individual_evaluation_range():
+    ga = GeneticAlgorithm(poblacion=1, gen_max=1)
 
-def test_ca_output_shape():
-    r = 2
-    width = 20
-    rule = np.random.randint(0, 2, 2 ** (2 * r + 1))
+    ca = ga.poblacion_ca[0]
+    A = np.random.randint(0, 2, (1, ga.ancho))
+    Cf = np.random.randint(0, 2, (1, ga.ancho))
 
-    ca = CellularAutomaton(rule, r=r, width=width, timesteps=15)
-    initial = np.random.randint(0, 2, width)
+    score = ga._evaluate_individual(ca, A, Cf)
 
-    evolution = ca._run(initial)
-
-    assert evolution.shape == (15, width)
+    assert 0 <= score <= 1
 
 
-def test_ca_deterministic():
-    r = 2
-    width = 20
-    rule = np.random.randint(0, 2, 2 ** (2 * r + 1))
 
-    ca = CellularAutomaton(rule, r=r, width=width, timesteps=10)
-    initial = np.random.randint(0, 2, width)
+def test_crossover_creates_valid_child():
+    ga = GeneticAlgorithm(r=2)
 
-    e1 = ca._run(initial)
-    e2 = ca._run(initial)
+    p1 = ga.poblacion_ca[0]
+    p2 = ga.poblacion_ca[1]
 
-    assert np.array_equal(e1, e2)
+    child = ga._crossover(p1, p2)
 
-
-def test_ca_constant_rule():
-    r = 1
-    width = 15
-    rule = np.zeros(2 ** (2 * r + 1), dtype=int)
-
-    ca = CellularAutomaton(rule, r=r, width=width, timesteps=10)
-    initial = np.zeros(width, dtype=int)
-
-    evolution = ca._run(initial)
-
-    assert np.all(evolution == 0)
+    assert isinstance(child, CellularAutomaton)
+    assert len(child.rule) == len(p1.rule)
+    assert child.r == ga.r
 
 
-def test_ca_single_active_cell():
-    r = 1
-    width = 15
 
-    rule = np.zeros(2 ** (2 * r + 1), dtype=int)
-    rule[len(rule)//2] = 1  # regla simple de propagación
+def test_mutation_changes_rule():
+    ga = GeneticAlgorithm(poblacion=1, r=2)
 
-    ca = CellularAutomaton(rule, r=r, width=width, timesteps=5)
+    ca = ga.poblacion_ca[0]
+    original = ca.rule.copy()
 
-    initial = np.zeros(width, dtype=int)
-    initial[width // 2] = 1
+    ga._mutate(ca)
 
-    evolution = ca._run(initial)
-
-    assert evolution.shape[0] == 5
+    assert not np.array_equal(original, ca.rule)
 
 
-def test_ca_mutation_changes_rule():
-    r = 2
-    rule = np.ones(2 ** (2 * r + 1), dtype=int)
+def test_mutation_bounds():
+    ga = GeneticAlgorithm(r=2)
 
-    ca = CellularAutomaton(rule, r=r)
+    ca = ga.poblacion_ca[0]
+    ga._mutate(ca)
 
-    mutated = ca._mutate(mutation_rate=1.0)
+    assert np.all((ca.rule == 0) | (ca.rule == 1))
 
-    assert not np.array_equal(rule, mutated)
+
+
+def test_selection_returns_top_parents():
+    ga = GeneticAlgorithm(poblacion=10, num_parents=3, gen_max=1)
+
+    A = np.random.randint(0, 2, (ga.num_CI, ga.ancho))
+    Cf = np.random.randint(0, 2, (ga.num_CI, ga.ancho))
+
+    fitness = ga._evaluar_poblacion(A, Cf)
+
+    idx = np.argsort(-fitness)
+    best = fitness[idx[0]]
+
+    assert best == np.max(fitness)
+
+
+
+def test_diversity_non_negative():
+    ga = GeneticAlgorithm(poblacion=10)
+
+    div = ga._calcular_diversidad()
+
+    assert div >= 0
+
+
+
+def test_evolution_runs_without_error():
+    ga = GeneticAlgorithm(poblacion=10, gen_max=2)
+
+    ga.evolucionar(verbose=False)
+
+    assert len(ga.mejor_nota_generaciones) == ga.gen_max
+
+
+
+def test_statistics_are_recorded():
+    ga = GeneticAlgorithm(poblacion=10, gen_max=2)
+
+    ga.evolucionar(verbose=False)
+
+    assert len(ga.estadisticas['mejor']) == ga.gen_max
+    assert len(ga.estadisticas['promedio']) == ga.gen_max
+    assert len(ga.estadisticas['diversidad']) == ga.gen_max

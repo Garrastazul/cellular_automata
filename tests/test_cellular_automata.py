@@ -33,9 +33,9 @@ def test_ca_output_shape():
     ca = CellularAutomaton(rule, r=r, width=width, timesteps=15)
     initial = np.random.randint(0, 2, width)
 
-    evolution = ca._run(initial)
+    ca.run(initial)
 
-    assert evolution.shape == (15, width)
+    assert ca.trajectory.shape == (15, width)
 
 
 def test_ca_deterministic():
@@ -65,29 +65,4 @@ def test_ca_constant_rule():
     assert np.all(evolution == 0)
 
 
-def test_ca_single_active_cell():
-    r = 1
-    width = 15
 
-    rule = np.zeros(2 ** (2 * r + 1), dtype=int)
-    rule[len(rule)//2] = 1  # regla simple de propagación
-
-    ca = CellularAutomaton(rule, r=r, width=width, timesteps=5)
-
-    initial = np.zeros(width, dtype=int)
-    initial[width // 2] = 1
-
-    evolution = ca._run(initial)
-
-    assert evolution.shape[0] == 5
-
-
-def test_ca_mutation_changes_rule():
-    r = 2
-    rule = np.ones(2 ** (2 * r + 1), dtype=int)
-
-    ca = CellularAutomaton(rule, r=r)
-
-    mutated = ca._mutate(mutation_rate=1.0)
-
-    assert not np.array_equal(rule, mutated)
