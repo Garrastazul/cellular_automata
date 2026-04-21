@@ -37,7 +37,12 @@ def _run_ca(rule, r, timesteps, initial_state):
 
 class CellularAutomaton:
     def __init__(self, rule, r=3, width=101, timesteps=None):
-        self.rule = rule.astype(int)
+        
+        if isinstance(rule, int):
+            self.rule = int_to_binary_rule(rule, r)
+        else:
+            self.rule = np.asarray(rule, dtype=int)
+
         self.r = r
         self.width = width
         self.timesteps = timesteps if timesteps else 2 * width
